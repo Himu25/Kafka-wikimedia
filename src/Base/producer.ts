@@ -1,9 +1,12 @@
-import { Kafka, Producer } from "kafkajs";
+import {  CompressionTypes, Kafka, Producer } from "kafkajs";
+
 
 export class ProducerFactory {
+  public topic: string;
   private producer: Producer;
 
-  constructor() {
+  constructor(topic: string) {
+    this.topic = topic;
     this.producer = this.createProducer();
   }
 
@@ -28,7 +31,9 @@ export class ProducerFactory {
   async onMessage(message: any): Promise<void> {
     try {
       await this.producer.send({
-        topic: "wikimedia-message",
+        topic: this.topic,
+        acks: -1,
+        compression: CompressionTypes.GZIP,
         messages: [
           {
             value: JSON.stringify(message),
@@ -45,7 +50,11 @@ export class ProducerFactory {
     const kafka = new Kafka({
       clientId: "producer-client",
       brokers: ["127.0.0.1:9092"],
+
     });
-    return kafka.producer();
+  return kafka.producer({
+    idempotent: true,
+    maxInFlightRequests: 5,
+  });
   }
 }
